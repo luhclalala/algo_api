@@ -8,6 +8,12 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# 添加国内源
+RUN echo "deb http://mirrors.aliyun.com/debian bookworm main contrib non-free" > /etc/apt/sources.list && \
+    echo "deb http://mirrors.aliyun.com/debian bookworm-updates main contrib non-free" >> /etc/apt/sources.list && \
+    echo "deb http://mirrors.aliyun.com/debian-security bookworm-security main contrib non-free" >> /etc/apt/sources.list
+
+
 # 安装工具
 RUN apt-get update && apt-get install -y \
     gcc \
@@ -17,11 +23,6 @@ RUN apt-get update && apt-get install -y \
     iputils-ping \
     vim \
     && rm -rf /var/lib/apt/lists/*
-
-# 拷贝依赖清单并安装 Python 包
-COPY requirements.txt .
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
 
 # 暴露指定端口
 EXPOSE 8000
