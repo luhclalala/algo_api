@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:latest
+    container_name: algo_nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./static:/var/www/static
+    command: >
+      sh -c "chmod -R 755 /var/www/static && nginx -g 'daemon off;'"
+    depends_on:
+      - algo
+    networks:
+      - app-network
+
+  algo:
+    build: ./algo
+    image: algo_server
+    container_name: algo_core
+    command: gunicorn -c gunicorn.conf.py main:app
+    volumes:
+      - ./algo/:/app/
+    env_file:
+      - .env
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+    ports:
+      - "8000:8000"
+
+  redis:
+    image: redis:alpine
+    container_name: algo_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  mysql:
+    image: mysql:8.0
+    container_name: algo_mysql
+    env_file:
+      - .env
+    volumes:
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./mysql/data:/var/lib/mysql
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+
+networks:
+  app-network:
+    driver: bridge 
